@@ -1,22 +1,13 @@
 package com.nicholasgot.sunshineapp;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.preference.Preference;
-import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
-import android.support.v4.widget.SimpleCursorAdapter;
-import android.text.format.Time;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -24,13 +15,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.ShareActionProvider;
-import android.widget.Toast;
 
 import com.nicholasgot.sunshineapp.data.WeatherContract;
-import com.nicholasgot.sunshineapp.data.WeatherProvider;
 
 
 /**
@@ -74,8 +61,6 @@ public class ForecastFragment extends Fragment
     public ForecastFragment() {
     }
 
-
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,11 +78,12 @@ public class ForecastFragment extends Fragment
         fetchWeatherTask.execute(location);
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        updateWeather();
-    }
+    // TODO: better performance, network requests every time onStart is called
+//    @Override
+//    public void onStart() {
+//        super.onStart();
+//        updateWeather();
+//    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -124,7 +110,7 @@ public class ForecastFragment extends Fragment
                         0                 // No flags
                 );
 
-        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_forecast, container, false);
         mListView =  (ListView) rootView.findViewById(R.id.listview_forecast);
         mListView.setAdapter(mForecastAdapter);
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -189,5 +175,11 @@ public class ForecastFragment extends Fragment
          * Prevents memory leaks
          */
         mForecastAdapter.changeCursor(null);
+    }
+
+    public void onLocationChanged() {
+        updateWeather();
+        // restart the loader
+        getLoaderManager().restartLoader(WEATHER_LOADER, null, this);
     }
 }
