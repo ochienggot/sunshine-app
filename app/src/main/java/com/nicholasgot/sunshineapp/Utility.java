@@ -22,7 +22,10 @@ import android.text.format.Time;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Locale;
 
 public class Utility {
     public static final String DATE_FORMAT = "yyyMMdd";
@@ -56,26 +59,27 @@ public class Utility {
     }
 
     public static String displayFriendlyDayString(Context context, long dateInMillis) {
-        Time time = new Time();
-        time.setToNow();
-        long currentTime = System.currentTimeMillis();
-        int julianDay = Time.getJulianDay(dateInMillis, time.gmtoff);
-        int currentJulianDay = Time.getJulianDay(currentTime, time.gmtoff);
+        GregorianCalendar calCurrent = new GregorianCalendar(); // current time
+        int dayCur = calCurrent.get(Calendar.DAY_OF_YEAR);
+
+        GregorianCalendar calOther = new GregorianCalendar();
+        calOther.setTime(new Date(dateInMillis));
+        int dayOther = calOther.get(Calendar.DAY_OF_YEAR);
 
         // If the date we're building the string for is today, the format is
         // "Today, June 24"
-        if (julianDay == currentJulianDay) {
+        if (dayOther == dayCur) {
             String today = context.getString(R.string.today);
             int formatId = R.string.format_full_friendly_date;
-            return String.format(context.getString(
+            return context.getString(
                     formatId,
                     today,
-                    getFormattedMonthDay(context, dateInMillis)));
-        } else if (julianDay < currentJulianDay + 7) {
+                    getFormattedMonthDay(context, dateInMillis));
+        } else if (dayOther < dayCur + 7) {
             return getDayName(context, dateInMillis);
         } else {
             // Otherwise use the form "Mon June 3"
-            SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd");
+            SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd", Locale.US);
             return shortenedDateFormat.format(dateInMillis);
         }
     }
@@ -87,18 +91,18 @@ public class Utility {
      * @return
      */
     public static String getDayName(Context context, long dateInMillis) {
-        Time time = new Time();
-        time.setToNow();
-        int julianDay = Time.getJulianDay(dateInMillis, time.gmtoff);
-        int currentJulianDay = Time.getJulianDay(System.currentTimeMillis(), time.gmtoff);
-        if (julianDay == currentJulianDay) {
+        GregorianCalendar calCurrent = new GregorianCalendar(); // current time
+        GregorianCalendar calOther = new GregorianCalendar();
+        calOther.setTime(new Date(dateInMillis));
+        int dayCur = calCurrent.get(Calendar.DAY_OF_YEAR);
+        int dayOther = calOther.get(Calendar.DAY_OF_YEAR);
+
+        if (dayCur == dayOther) {
             return context.getString(R.string.today);
-        } else if (julianDay == currentJulianDay + 1) {
+        } else if (dayOther == dayCur + 1) {
             return context.getString(R.string.tomorrow);
         } else {
-            Time t = new Time();
-            t.setToNow();
-            SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE");
+            SimpleDateFormat dayFormat = new SimpleDateFormat("EEEE", Locale.US);
             // Otherwise the format is just the day of the week
             return dayFormat.format(dateInMillis);
         }
@@ -111,10 +115,8 @@ public class Utility {
      * @return
      */
     public static String getFormattedMonthDay(Context context, long dateInMillis) {
-        Time time = new Time();
-        time.setToNow();
-        SimpleDateFormat dbDateFormat = new SimpleDateFormat(Utility.DATE_FORMAT);
-        SimpleDateFormat monthDateFormat = new SimpleDateFormat("MMMM dd");
+        SimpleDateFormat dbDateFormat = new SimpleDateFormat(Utility.DATE_FORMAT, Locale.US);
+        SimpleDateFormat monthDateFormat = new SimpleDateFormat("MMMM dd", Locale.US);
         String monthDayString = monthDateFormat.format(dateInMillis);
         return monthDayString;
     }

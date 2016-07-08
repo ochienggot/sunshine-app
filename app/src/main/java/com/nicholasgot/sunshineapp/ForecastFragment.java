@@ -54,9 +54,7 @@ public class ForecastFragment extends Fragment
     static final int COL_COORD_LAT = 7;
     static final int COL_COORD_LON = 8;
 
-    private ListView mListView;
     private ForecastAdapter mForecastAdapter ;
-
 
     public ForecastFragment() {
     }
@@ -111,9 +109,9 @@ public class ForecastFragment extends Fragment
                 );
 
         View rootView = inflater.inflate(R.layout.fragment_forecast, container, false);
-        mListView =  (ListView) rootView.findViewById(R.id.listview_forecast);
-        mListView.setAdapter(mForecastAdapter);
-        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        ListView listview =  (ListView) rootView.findViewById(R.id.listview_forecast);
+        listview.setAdapter(mForecastAdapter);
+        listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView adapterView, View view, int position, long id) {
                 // CursorAdapter returns a cursor at the correct position for getItem(), or null
