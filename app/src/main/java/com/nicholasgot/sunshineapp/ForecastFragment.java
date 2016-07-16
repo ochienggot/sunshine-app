@@ -1,10 +1,14 @@
 package com.nicholasgot.sunshineapp;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -26,7 +30,18 @@ import com.nicholasgot.sunshineapp.data.WeatherContract;
 public class ForecastFragment extends Fragment
     implements LoaderManager.LoaderCallbacks<Cursor> {
 
+    public ForecastFragment() {
+    }
+
+    // Container activity must implement this interface
+    public interface OnItemSelectedListener {
+        void onItemSelected(Uri dateUri);
+    }
+
+    OnItemSelectedListener mCallback;
+
     // How do I make this code more readable, faster and ready for change?
+    private ForecastAdapter mForecastAdapter ;
 
     // Create loader ID
     private static final int WEATHER_LOADER = 1; // static variable => global variable
@@ -54,10 +69,6 @@ public class ForecastFragment extends Fragment
     static final int COL_COORD_LAT = 7;
     static final int COL_COORD_LON = 8;
 
-    private ForecastAdapter mForecastAdapter ;
-
-    public ForecastFragment() {
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -111,6 +122,7 @@ public class ForecastFragment extends Fragment
         View rootView = inflater.inflate(R.layout.fragment_forecast, container, false);
         ListView listview =  (ListView) rootView.findViewById(R.id.listview_forecast);
         listview.setAdapter(mForecastAdapter);
+        // if two pane, set up listener
         listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView adapterView, View view, int position, long id) {
@@ -118,18 +130,30 @@ public class ForecastFragment extends Fragment
                 // if it cannot seek to that position
                 Cursor cursor = (Cursor) adapterView.getItemAtPosition(position);
                 if (cursor != null) {
-                    String locationSetting = Utility.getPreferredLocation(getActivity());
-                    // TODO: URI, intent passing data READ
-                    Intent intent = new Intent(getActivity(), DetailActivity.class)
-                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
-                                    locationSetting, cursor.getLong(COL_WEATHER_DATE)
-                            ));
-                    startActivity(intent);
+                    long date = cursor.getLong(COL_WEATHER_DATE);
+                    String locationSetting = Utility.getPreferredLocation(getContext());
+                    Uri dateUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                            locationSetting, date);
+                    // Communicate with the main Activity, not directly with the details fragment
+                    mCallback.onItemSelected(dateUri);
+
                 }
             }
         });
 
         return rootView;
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        try {
+            mCallback = (OnItemSelectedListener) context;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(context.toString()
+                    + " must implement Callback");
+        }
     }
 
     @Override

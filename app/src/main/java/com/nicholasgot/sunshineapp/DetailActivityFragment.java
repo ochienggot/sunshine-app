@@ -3,7 +3,6 @@ package com.nicholasgot.sunshineapp;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.provider.ContactsContract;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
@@ -19,7 +18,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.nicholasgot.sunshineapp.data.WeatherContract;
@@ -45,19 +43,21 @@ public class DetailActivityFragment extends Fragment
             WeatherContract.WeatherEntry.COLUMN_HUMIDITY,
             WeatherContract.WeatherEntry.COLUMN_WIND_SPEED,
             WeatherContract.WeatherEntry.COLUMN_DEGREES,
-            WeatherContract.WeatherEntry.COLUMN_PRESSURE
+            WeatherContract.WeatherEntry.COLUMN_PRESSURE,
+            WeatherContract.WeatherEntry.COLUMN_WEATHER_ID
     };
 
     // Constant values tied to FORECAST_COLUMNS (so we don't have to ask for col indices from cursor: performance)
-    static final int COL_WEATHER_ID = 0;
-    static final int COL_WEATHER_DATE = 1;
-    static final int COL_WEATHER_DESC = 2;
-    static final int COL_WEATHER_MAX_TEMP = 3;
-    static final int COL_WEATHER_MIN_TEMP = 4;
-    static final int COL_WEATHER_HUMIDITY = 5;
-    static final int COL_WEATHER_WIND_SPEED = 6;
-    static final int COL_WEATHER_DEGREES = 7;
-    static final int COL_WEATHER_PRESSURE = 8;
+    private static final int COL_WEATHER_ID = 0;
+    private static final int COL_WEATHER_DATE = 1;
+    private static final int COL_WEATHER_DESC = 2;
+    private static final int COL_WEATHER_MAX_TEMP = 3;
+    private static final int COL_WEATHER_MIN_TEMP = 4;
+    private static final int COL_WEATHER_HUMIDITY = 5;
+    private static final int COL_WEATHER_WIND_SPEED = 6;
+    private static final int COL_WEATHER_DEGREES = 7;
+    private static final int COL_WEATHER_PRESSURE = 8;
+    private static final int COL_WEATHER_CONDITION_ID = 9;
 
     private ShareActionProvider mShareActionProvider;
     private static final String FORECAST_SHARE_HASHTAG = " #SunshineApp";
@@ -77,9 +77,23 @@ public class DetailActivityFragment extends Fragment
     public DetailActivityFragment() {
     }
 
-    @Override
-    public String toString() {
-        return super.toString();
+    public static final String DETAIL_URI = "detailUri";
+
+    public static DetailActivityFragment newInstance(Uri uri) {
+        DetailActivityFragment fragment = new DetailActivityFragment();
+
+        // Supply Uri input as argument
+        Bundle args = new Bundle();
+        args.putParcelable(DETAIL_URI, uri);
+        fragment.setArguments(args);
+
+        return fragment;
+    }
+
+    public static Uri mUri;
+
+    public Uri getDetailUri() {
+        return getArguments().getParcelable(DETAIL_URI);
     }
 
     @Override
@@ -116,8 +130,12 @@ public class DetailActivityFragment extends Fragment
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+        Bundle args = getArguments();
+        if (args != null) {
+            mUri = args.getParcelable(DETAIL_URI);
+        }
 
+        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
         mIconView = (ImageView) rootView.findViewById(R.id.detail_icon);
         mDayTextView = (TextView) rootView.findViewById(R.id.detail_today_textview);
         mDateTextView = (TextView) rootView.findViewById(R.id.detail_date_textview);
@@ -141,21 +159,18 @@ public class DetailActivityFragment extends Fragment
     @Override
     public Loader<Cursor> onCreateLoader(int loaderID, Bundle args) {
         Log.v(LOG_TAG, "In onCreateLoader");
-        Intent intent = getActivity().getIntent(); // TODO: Intent received by containing activity, what if there's > 1?
-        if (intent == null) {
-            return null;
-        }
 
-        // Create and return a cursor loader responsible for creating
-        // the cursor for the data being displayed // TODO: cursors
-        return new CursorLoader(
-                getActivity(),
-                intent.getData(), // URI
-                DETAIL_COLUMNS, // Projection
-                null,
-                null,
-                null
-        );
+        if (mUri != null) {
+            return new CursorLoader(
+                    getActivity(),
+                    mUri,
+                    DETAIL_COLUMNS, // Projection
+                    null,
+                    null,
+                    null
+            );
+        }
+        return null;
     }
 
     @Override
@@ -165,6 +180,16 @@ public class DetailActivityFragment extends Fragment
         if (!data.moveToFirst()) {
             return;
         }
+
+        // dynamically set image to display depending on weather condition ID
+        int weatherConditionID = data.getInt(COL_WEATHER_CONDITION_ID);
+        int weatherRes = Utility.getArtResourceForWeatherCondition(weatherConditionID);
+        if (weatherRes != -1) {
+            mIconView.setImageResource(weatherRes);
+        } else {
+            mIconView.setImageResource(R.drawable.ic_wb_sunny_blue_a100_24dp);
+        }
+
         boolean isMetric = Utility.isMetric(getActivity());
         String dateString = Utility.formatDate(data.getLong(COL_WEATHER_DATE));
         String day = Utility.getDayName(getContext(), data.getLong(COL_WEATHER_DATE));
@@ -178,10 +203,6 @@ public class DetailActivityFragment extends Fragment
         double lowTemp = data.getDouble(COL_WEATHER_MIN_TEMP);
         mLowTextView.setText(
                 Utility.formatTemperature(getContext(), lowTemp, isMetric));
-
-        // TODO: dynamically set image to display depending on weather ID
-        int weatherId = data.getInt(COL_WEATHER_ID);
-        mIconView.setImageResource(R.drawable.ic_wb_sunny_blue_a100_24dp);
 
         String desc = data.getString(COL_WEATHER_DESC);
         mDescView.setText(desc);
@@ -217,5 +238,16 @@ public class DetailActivityFragment extends Fragment
         shareIntent.putExtra(Intent.EXTRA_TEXT,
                 mForecast + FORECAST_SHARE_HASHTAG);
         return shareIntent;
+    }
+
+    public void onLocationChanged(String newLocation) {
+        // Replace the uri since the loader has changed
+        Uri uri = mUri;
+
+        if (uri != null) {
+            long date = WeatherContract.WeatherEntry.getDateFromUri(uri);
+            mUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(newLocation, date);
+            getLoaderManager().restartLoader(DETAIL_LOADER, null, this);
+        }
     }
 }

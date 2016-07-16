@@ -9,13 +9,14 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.nicholasgot.sunshineapp.data.WeatherContract;
 
 /**
  * {@link ForecastAdapter} exposes a list of weather forecasts
  * from a {@link android.database.Cursor} to a {@link android.widget.ListView}.
  */
 public class ForecastAdapter extends CursorAdapter {
+
+    public static final String LOG_TAG = ForecastAdapter.class.getSimpleName();
 
     private static final int VIEW_TYPE_TODAY = 0;
     private static final int VIEW_TYPE_FUTURE_DAY = 1;
@@ -72,8 +73,21 @@ public class ForecastAdapter extends CursorAdapter {
 
         ViewHolder holder = (ViewHolder) view.getTag();
 
-        int weatherID = cursor.getInt(ForecastFragment.COL_WEATHER_ID);
-        holder.iconView.setImageResource(R.drawable.ic_wb_sunny_blue_a100_24dp);
+        int weatherConditionId = cursor.getInt(ForecastFragment.COL_WEATHER_CONDITION_ID);
+
+        int viewType = getItemViewType(cursor.getPosition());
+        int weatherResId;
+        if (viewType == VIEW_TYPE_TODAY) {
+            weatherResId = Utility.getArtResourceForWeatherCondition(weatherConditionId);
+        } else {
+            weatherResId = Utility.getIconResourceForWeatherCondition(weatherConditionId);
+        }
+
+        if (weatherResId != -1) {
+            holder.iconView.setImageResource(weatherResId);
+        } else {
+            holder.iconView.setImageResource(R.drawable.ic_wb_sunny_blue_a100_24dp);
+        }
 
         // TODO: read date from cursor
         long date = cursor.getLong(ForecastFragment.COL_WEATHER_DATE);

@@ -17,4 +17,8 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+    <style name="ForecastListStyle">
+        <!-- Just a stub, left empty. For 2-pane mode, this style is defined -->
+    </style>
+
 </resources>

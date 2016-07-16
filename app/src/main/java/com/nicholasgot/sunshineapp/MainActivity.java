@@ -1,19 +1,28 @@
 package com.nicholasgot.sunshineapp;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+import com.nicholasgot.sunshineapp.data.WeatherContract;
+
+public class MainActivity extends AppCompatActivity
+        implements ForecastFragment.OnItemSelectedListener {
 
     private String mLocation;
 
-    private static final String FORECASTFRAGMENT_TAG = "forecast_fragment";
+    private static final String DETAIL_FRAGMENT_TAG = "DFTAG";
+    public static boolean mTwoPane;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,12 +33,24 @@ public class MainActivity extends AppCompatActivity {
 
         mLocation = Utility.getPreferredLocation(this);
 
-        // Add forecast fragment to this Activity's state
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new ForecastFragment(), FORECASTFRAGMENT_TAG)
-                    .commit();
+        if (findViewById(R.id.weather_detail_container) != null) {
+            mTwoPane = true;
+            // show the detail view in this activity by adding or replacing detail fragment
+            if (savedInstanceState == null) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.weather_detail_container, new DetailActivityFragment(), DETAIL_FRAGMENT_TAG)
+                        .commit();
+            } else {
+                mTwoPane = false;
+            }
         }
+
+        // Add forecast fragment to this Activity's state
+//        if (savedInstanceState == null) {
+//            getSupportFragmentManager().beginTransaction()
+//                    .add(R.id.container, new ForecastFragment(), FORECASTFRAGMENT_TAG)
+//                    .commit();
+//        }
     }
 
     @Override
@@ -39,11 +60,17 @@ public class MainActivity extends AppCompatActivity {
         boolean locationChanged = !location.equals(mLocation);
         if (locationChanged) {
             ForecastFragment forecastFragment = (ForecastFragment) getSupportFragmentManager()
-                    .findFragmentByTag(FORECASTFRAGMENT_TAG);
+                    .findFragmentById(R.id.fragment); // TODO: fix
             if (forecastFragment != null) {
                 forecastFragment.onLocationChanged();
             }
-            mLocation = Utility.getPreferredLocation(this);
+
+            DetailActivityFragment df = (DetailActivityFragment)
+                    getSupportFragmentManager().findFragmentByTag(DETAIL_FRAGMENT_TAG);
+            if (df != null) {
+                df.onLocationChanged(location);
+            }
+            mLocation = location;
         }
     }
 
@@ -58,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
+        // as you specify a parent activity in AndroidManifest.values-sw600dp.
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
@@ -85,6 +112,23 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
 
         if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivity(intent);
+        }
+    }
+
+    public void onItemSelected(Uri dateUri) {
+        // The fragments shouldn't communicate directly
+
+        if (mTwoPane) { // 2-pane: On tablet, launch DetailActivity Fragment
+            DetailActivityFragment newFrag = DetailActivityFragment.newInstance(dateUri);
+            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            ft.replace(R.id.weather_detail_container, newFrag, DETAIL_FRAGMENT_TAG);
+
+            ft.commit();
+        } else { // On phone: launch Detail Activity
+            // TODO: URI, intent passing data READ
+            Intent intent = new Intent(this, DetailActivity.class)
+                    .setData(dateUri);
             startActivity(intent);
         }
     }
